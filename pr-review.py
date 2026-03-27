@@ -3,7 +3,7 @@ import requests
 import json
 import sys
 
-# ── 1. Fetch PR diff from GitHub ──────────────────────────────────────────────
+# 1. Fetch PR diff from GitHub
 def fetch_pr_diff(repo: str, pr_number: str, token: str) -> str:
     url     = f"https://api.github.com/repos/{repo}/pulls/{pr_number}/files"
     headers = {
@@ -20,7 +20,7 @@ def fetch_pr_diff(repo: str, pr_number: str, token: str) -> str:
     return diff_text
 
 
-# ── 2. Send diff to Ollama for review ─────────────────────────────────────────
+# 2. Send diff to Ollama for review
 def review_with_ollama(diff: str, ollama_url: str) -> str:
     prompt = f"""You are a senior Python security engineer doing a pull request review.
 
@@ -41,7 +41,7 @@ Diff:
 {diff}
 """
     payload = {
-        "model": "codellama",
+        "model": "qwen2.5-coder:0.5b",
         "prompt": prompt,
         "stream": False
     }
@@ -54,20 +54,20 @@ Diff:
     return resp.json()["response"]
 
 
-# ── 3. Post review as PR comment ───────────────────────────────────────────────
+# 3. Post review as PR comment
 def post_pr_comment(repo: str, pr_number: str, token: str, review: str) -> str:
     url     = f"https://api.github.com/repos/{repo}/issues/{pr_number}/comments"
     headers = {
         "Authorization": f"token {token}",
         "Accept": "application/vnd.github.v3+json"
     }
-    body    = f"## AI Code Review — Ollama / CodeLlama\n\n{review}"
+    body    = f"## AI Code Review — Ollama / Qwen2.5-Coder Model\n\n{review}"
     resp    = requests.post(url, headers=headers, json={"body": body})
     resp.raise_for_status()
     return resp.json()["html_url"]
 
 
-# ── 4. Set PR review status (approve or request changes) ──────────────────────
+# 4. Set PR review status (approve or request changes)
 def set_pr_review_status(repo: str, pr_number: str, token: str, verdict: str) -> None:
     url     = f"https://api.github.com/repos/{repo}/pulls/{pr_number}/reviews"
     headers = {
@@ -82,7 +82,7 @@ def set_pr_review_status(repo: str, pr_number: str, token: str, verdict: str) ->
     print(f"PR review status set to: {event}")
 
 
-# ── Main ───────────────────────────────────────────────────────────────────────
+# Main
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--pr-number",  required=True)
@@ -103,5 +103,5 @@ if __name__ == "__main__":
     comment_url = post_pr_comment(args.repo, args.pr_number, args.token, review)
     print(f"      Comment posted: {comment_url}")
 
-    set_pr_review_status(args.repo, args.pr_number, args.token, review)
+    #set_pr_review_status(args.repo, args.pr_number, args.token, review) This line is not possible in our case as we are PR creator and Approver too.
     print("Done.")
